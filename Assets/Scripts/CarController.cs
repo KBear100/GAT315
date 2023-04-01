@@ -9,6 +9,7 @@ public class CarController : MonoBehaviour
     public class Wheel
     {
         public WheelCollider collider;
+        public Transform transform;
     }
 
     [System.Serializable]
@@ -26,23 +27,34 @@ public class CarController : MonoBehaviour
 
     public void FixedUpdate()
     {
-        float motor = 0; 
-        // motor = < motor torque* input axis "Vertical" >
-        float steering = 0; 
-        // steering = <max steering angle* input axis "Horizontal" >
+        float motor = maxMotorTorque * Input.GetAxis("Vertical"); // motor = < motor torque* input axis "Vertical" >
+        float steering = maxSteeringAngle * Input.GetAxis("Horizontal"); // steering = <max steering angle* input axis "Horizontal" >
 
     foreach (Axle axle in axles)
         {
             if (axle.isSteering)
             {
                 axle.leftWheel.collider.steerAngle = steering;
+                axle.rightWheel.collider.steerAngle = steering;
                 // <set right wheel steer angle >
             }
             if (axle.isMotor)
             {
                 axle.leftWheel.collider.motorTorque = motor;
+                axle.rightWheel.collider.motorTorque = motor;
                 // <set right wheel motor torque >
             }
+
+            UpdateWheelTransform(axle.leftWheel);
+            UpdateWheelTransform(axle.rightWheel);
         }
+    }
+
+    public void UpdateWheelTransform(Wheel wheel)
+    {
+        wheel.collider.GetWorldPose(out Vector3 position, out Quaternion rotation);
+
+        wheel.transform.position = position;
+        wheel.transform.rotation = rotation;
     }
 }
