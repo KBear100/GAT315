@@ -57,4 +57,9 @@ public class CarController : MonoBehaviour
         wheel.transform.position = position;
         wheel.transform.rotation = rotation;
     }
+
+    public void OnTriggerEnter(Collider other)
+    {
+        Destroy(other.gameObject);
+    }
 }

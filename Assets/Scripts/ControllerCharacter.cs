@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -8,7 +9,10 @@ public class ControllerCharacter : MonoBehaviour
 	[SerializeField] float speed;
 	[SerializeField] float turnRate;
 	[SerializeField] float jumpHeight;
+	[SerializeField] float doubleJumpHeight;
 	[SerializeField] float hitForce;
+	[SerializeField, Range(1, 5)] float fallRateMultiplier;
+	[SerializeField, Range(1, 5)] float lowJumpRateMultiplier; 
 
 	CharacterController characterController;
 	Vector3 velocity = Vector3.zero;
@@ -25,18 +29,25 @@ public class ControllerCharacter : MonoBehaviour
 		direction.x = Input.GetAxis("Horizontal");
 		direction.z = Input.GetAxis("Vertical");
 
+		velocity.x = direction.x * speed;
+		velocity.z = direction.z * speed;
+		
 		// set velocity
 		if (characterController.isGrounded)
 		{
-			velocity.x = direction.x * speed;
-			velocity.z = direction.z * speed;
 
 			if(velocity.y < 0) velocity.y = 0;
 			if(Input.GetButtonDown("Jump"))
 			{
 				velocity.y += Mathf.Sqrt(jumpHeight * -2 * Physics.gravity.y);
+				StartCoroutine(DoubleJump());
 			}
 		}
+
+		// adjust gravity for jump
+		float gravityMultiplier = 1;
+		if (!characterController.isGrounded && velocity.y < 0) gravityMultiplier = fallRateMultiplier;
+		if (!characterController.isGrounded && velocity.y > 0 && !Input.GetButton("Jump")) gravityMultiplier = lowJumpRateMultiplier;
 
 		velocity.y += Physics.gravity.y * Time.deltaTime;
 
@@ -75,5 +86,22 @@ public class ControllerCharacter : MonoBehaviour
 
 		// Apply the push
 		body.velocity = pushDir * hitForce;
+	}
+
+	IEnumerator DoubleJump()
+	{
+		// wait a little after the jump to allow a double jump
+		yield return new WaitForSeconds(0.01f);
+		// allow a double jump while moving up
+		while(velocity.y > 0)
+		{
+			// if "jump" pressed add jump velocity
+			if(Input.GetButtonDown("Jump"))
+			{
+				velocity.y += Mathf.Sqrt(doubleJumpHeight * -2 * Physics.gravity.y);
+				break;
+			}
+			yield return null;
+		}
 	}
 }
