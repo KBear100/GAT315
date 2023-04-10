@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class CharacterController2D : MonoBehaviour
+public class AIController2D : MonoBehaviour
 {
 	[SerializeField] Animator animator;
 	[SerializeField] SpriteRenderer spriteRenderer;
@@ -17,10 +17,27 @@ public class CharacterController2D : MonoBehaviour
 	[SerializeField] Transform groundTransform;
 	[SerializeField] LayerMask groundLayerMask;
 	[SerializeField] float groundRadius;
+	[Header("AI")]
+	[SerializeField] Transform[] waypoints;
+	[SerializeField] float rayDistance = 1;
 
 	Rigidbody2D rb;
+
 	Vector2 velocity = Vector2.zero;
 	bool faceRight = true;
+	float groundAngle = 0;
+	Transform targetWaypoint = null;
+
+	enum State
+	{
+		IDLE,
+		PATROL,
+		CHASE,
+		ATTACK
+	}
+
+	State state = State.IDLE;
+	float stateTimer = 0;
 
 	void Start()
 	{
@@ -29,12 +46,39 @@ public class CharacterController2D : MonoBehaviour
 
 	void Update()
 	{
+		Vector2 direction = Vector2.zero;
+		// update AI
+		switch (state)
+		{
+			case State.IDLE:
+                if (CanSeePlayer()) state = State.CHASE;
+                stateTimer += Time.deltaTime;
+				if (stateTimer > 2)
+				{
+					SetNewWaypointTarget();
+					state = State.PATROL;
+				}
+				break;
+			case State.PATROL:
+				if (CanSeePlayer()) state = State.CHASE;
+				direction.x = Mathf.Sign(targetWaypoint.position.x - transform.position.x);
+				float dx = Mathf.Abs(transform.position.x - targetWaypoint.position.x);
+				if(dx <= 0.25f)
+				{
+					state = State.IDLE;
+					stateTimer = 0;
+				}
+                break;
+			case State.CHASE:
+				break;
+			case State.ATTACK:
+				break;
+			default:
+				break;
+		}
+
 		// check if on ground
 		bool onGround = Physics2D.OverlapCircle(groundTransform.position, groundRadius, groundLayerMask) != null;
-
-		// get direction input
-		Vector2 direction = Vector2.zero;
-		direction.x = Input.GetAxis("Horizontal");
 
 		velocity.x = direction.x * speed;
 		
@@ -99,4 +143,22 @@ public class CharacterController2D : MonoBehaviour
 		Gizmos.color = Color.red;
 		Gizmos.DrawSphere(groundTransform.position, groundRadius);
 	}
+
+	private void SetNewWaypointTarget()
+	{
+		Transform waypoint = null;
+		while(waypoint == targetWaypoint || !waypoint)
+		{
+			waypoint = waypoints[Random.Range(0, waypoints.Length)];
+		}
+		targetWaypoint = waypoint;
+	}
+
+	private bool CanSeePlayer()
+	{
+        RaycastHit2D raycastHit = Physics2D.Raycast(transform.position, ((faceRight) ? Vector2.right : Vector2.left) * rayDistance);
+        Debug.DrawRay(transform.position, ((faceRight) ? Vector2.right : Vector2.left) * rayDistance);
+
+        return raycastHit.collider != null && raycastHit.collider.gameObject.CompareTag("Player");
+    }
 }
