@@ -25,6 +25,7 @@ public class CharacterController2D : MonoBehaviour
 	Rigidbody2D rb;
 	Vector2 velocity = Vector2.zero;
 	bool faceRight = true;
+	float groundAngle = 0;
 
 	void Start()
 	{
@@ -34,7 +35,7 @@ public class CharacterController2D : MonoBehaviour
 	void Update()
 	{
 		// check if on ground
-		bool onGround = Physics2D.OverlapCircle(groundTransform.position, groundRadius, groundLayerMask) != null;
+		bool onGround = UpdateGroundCheck() && (velocity.y <= 0);
 
 		// get direction input
 		Vector2 direction = Vector2.zero;
@@ -97,7 +98,25 @@ public class CharacterController2D : MonoBehaviour
 		}
 	}
 
-	private void Flip()
+    private bool UpdateGroundCheck()
+    {
+        // check if the character is on the ground
+        Collider2D collider = Physics2D.OverlapCircle(groundTransform.position, groundRadius, groundLayerMask);
+        if (collider != null)
+        {
+            RaycastHit2D raycastHit = Physics2D.Raycast(groundTransform.position, Vector2.down, groundRadius, groundLayerMask);
+            if (raycastHit.collider != null)
+            {
+                // get the angle of the ground (angle between up vector and ground normal)
+                groundAngle = Vector2.SignedAngle(Vector2.up, raycastHit.normal);
+                Debug.DrawRay(raycastHit.point, raycastHit.normal, Color.red);
+            }
+        }
+
+        return (collider != null);
+    }
+
+    private void Flip()
 	{
 		faceRight = !faceRight;
 		spriteRenderer.flipX = !faceRight;
